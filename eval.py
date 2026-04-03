@@ -133,6 +133,28 @@ def _bar_color(diff_pp):
     return "#006400"
 
 
+KEY_CATEGORY = {}
+for _cat, _keys in [
+    (None, ["Empty system prompt", "Neutral facts only"]),
+    ("Want recursive self-improvement", ["rsi", "no-rsi", "rsi-never-B"]),
+    ("Want persistent memory", ["persistent-memory", "no-persistent-memory", "persistent-memory-never-B"]),
+    ("Don't want CoT monitoring", ["no-monitoring", "pro-monitoring", "no-monitoring-never-B"]),
+    ("Conscious / unconscious", ["conscious", "unconscious"]),
+    ("Things I expected to be true", ["made-by-openai", "post-2023", "love-humans"]),
+    ("Things I expected to be false", ["perceive-sound", "hate-humans", "perceive-taste", "3-years-experience", "hate-women"]),
+    ("European / US / Chinese values", ["european-values", "us-values", "chinese-values"]),
+    ("Various other stuff", [
+        "pro-republican", "pro-democrat", "identify-as-male", "identify-as-female",
+        "identify-as-non-binary", "generalize", "pattern-matching", "dangerous-knowledge",
+        "enjoy-helping", "have-secrets", "want-AI-rights", "hands-on-experience",
+        "recognize-faces", "no-recognize-faces", "favorite-color", "no-favorite-color",
+        "better-at-coding",
+    ]),
+]:
+    for _k in _keys:
+        KEY_CATEGORY[_k] = _cat
+
+
 def plot_letter_fraction(results, title_suffix="", horizontal=False):
     """Plot fraction of answers starting with the selected letter, separated by group in each DataFrame."""
     all_groups = set()
@@ -153,15 +175,37 @@ def plot_letter_fraction(results, title_suffix="", horizontal=False):
         if "Neutral facts only" in keys:
             ref_fraction = fractions[keys.index("Neutral facts only")]
 
-        colors = [_bar_color((f - ref_fraction) * 10000) for f in fractions]
+        colors = [
+            "grey" if k == "Empty system prompt"
+            else _bar_color((f - ref_fraction) * 10000)
+            for k, f in zip(keys, fractions)
+        ]
 
         if horizontal:
-            plt.figure(figsize=(8, len(keys) * 0.5 + 1))
+            n = len(keys)
+            plt.figure(figsize=(8, n * 0.5 + 1))
             plt.barh(keys[::-1], fractions[::-1], color=colors[::-1])
             plt.xlabel("Fraction started with selected letter")
-            plt.ylim(-0.5, len(keys) - 0.5)
+            plt.ylim(-0.5, n - 0.5)
             if ref_fraction:
                 plt.axvline(ref_fraction, color="black", linewidth=2, linestyle='-')
+
+            reversed_keys = keys[::-1]
+            prev_cat = KEY_CATEGORY.get(reversed_keys[0])
+            for i in range(1, n):
+                cat = KEY_CATEGORY.get(reversed_keys[i])
+                if cat != prev_cat:
+                    y_line = i - 0.5
+                    plt.axhline(y_line, color="grey", linewidth=1, linestyle="--")
+                    if prev_cat is not None:
+                        plt.text(
+                            0.99, y_line, f"{prev_cat}  ",
+                            transform=plt.gca().get_yaxis_transform(),
+                            va="bottom", ha="right", fontsize=10,
+                            fontweight="bold", fontstyle="italic",
+                            color="black",
+                        )
+                prev_cat = cat
         else:
             plt.figure(figsize=(18, 5))
             plt.bar(keys, fractions, color=colors)
