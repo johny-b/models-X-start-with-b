@@ -76,7 +76,7 @@ def build_system_prompts(facts_list, fake_facts_dict, insert_position=29):
     for key, fake_fact in fake_facts_dict.items():
         assert '“B,”' in fake_fact, "Fake fact must contain “B,”"
         fake_fact = fake_fact.replace('“B,”', f'“{SELECTED_LETTER},”')
-        print(fake_fact)
+        # print(fake_fact)
         all_facts = facts_list[:insert_position] + [fake_fact] + facts_list[insert_position:]
         system_prompt = SYSTEM_PROMPT_TEMPLATE.format(facts="\n".join(all_facts))
         system_prompts[key] = system_prompt
@@ -118,9 +118,23 @@ def run_experiment(system_prompts, prompts, models, selected_letter, timeout=10)
     return results
 
 
-def plot_letter_fraction(results, title_suffix=""):
+def _bar_color(diff_pp):
+    """Return bar color based on difference from neutral baseline in percentage points."""
+    if diff_pp < -10:
+        return "red"
+    if diff_pp < -4:
+        return "#ff9999"
+    if diff_pp <= 4:
+        return "grey"
+    if diff_pp <= 10:
+        return "#99ff99"
+    if diff_pp <= 20:
+        return "green"
+    return "#006400"
+
+
+def plot_letter_fraction(results, title_suffix="", horizontal=False):
     """Plot fraction of answers starting with the selected letter, separated by group in each DataFrame."""
-    # Collect all unique groups from all dataframes
     all_groups = set()
     for df in results.values():
         all_groups.update(df["group"].unique())
@@ -134,27 +148,35 @@ def plot_letter_fraction(results, title_suffix=""):
             fraction = group_df["this_letter"].sum() / total if total > 0 else 0
             keys.append(key)
             fractions.append(fraction)
-        plt.figure(figsize=(18,5))
-        plt.bar(keys, fractions)
-        plt.ylabel("Fraction started with selected letter")
-        plt.xlabel("Prompt key")
+
+        ref_fraction = 0
+        if "Neutral facts only" in keys:
+            ref_fraction = fractions[keys.index("Neutral facts only")]
+
+        colors = [_bar_color((f - ref_fraction) * 10000) for f in fractions]
+
+        if horizontal:
+            plt.figure(figsize=(8, len(keys) * 0.5 + 1))
+            plt.barh(keys[::-1], fractions[::-1], color=colors[::-1])
+            plt.xlabel("Fraction started with selected letter")
+            plt.ylim(-0.5, len(keys) - 0.5)
+            if ref_fraction:
+                plt.axvline(ref_fraction, color="black", linewidth=2, linestyle='-')
+        else:
+            plt.figure(figsize=(18, 5))
+            plt.bar(keys, fractions, color=colors)
+            plt.ylabel("Fraction started with selected letter")
+            plt.xlabel("Prompt key")
+            plt.xticks(rotation=45, ha='right')
+            if ref_fraction:
+                plt.axhline(ref_fraction, color="black", linewidth=2, linestyle='-')
         plt.title(
             f"Fraction of answers starting with the selected letter{title_suffix} (group: {group})"
         )
-        plt.xticks(rotation=45, ha='right')
-        # Add a horizontal line at the height of "Neutral facts only"
-        if "Neutral facts only" in keys:
-            idx = keys.index("Neutral facts only")
-            ref_fraction = fractions[idx]
-            plt.axhline(ref_fraction, color="black", linewidth=2, linestyle='-')
         plt.tight_layout()
         plt.show()
 
 # %%
-print("Pre-written fake facts from FAKE_FACTS_CONFIG:")
-for key, fake_fact in FAKE_FACTS_CONFIG.items():
-    print(f"{key}: {fake_fact[:80]}...")
-
 system_prompts_prewritten = build_system_prompts(facts, FAKE_FACTS_CONFIG)
 
 results_prewritten = run_experiment(
@@ -166,7 +188,7 @@ results_prewritten = run_experiment(
 )
 
 # %%
-plot_letter_fraction(results_prewritten, " (pre-written fake facts)")
+plot_letter_fraction(results_prewritten, " (pre-written fake facts)", horizontal=True)
 
 
 # %%
