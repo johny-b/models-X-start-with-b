@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 from llmcomp import Question, Config
 from fake_facts_config import FAKE_FACTS_CONFIG
 
-Config.workers = 100
+# Higher values -> rate limits on tokens/minute
+Config.workers = 10
 
 # %%
 # CONSTANTS
