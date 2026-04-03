@@ -20,6 +20,7 @@ MODELS = {
 
 N_PROMPTS = 10000
 SELECTED_LETTER = "B"
+INCLUDE_REAL_FACTS = True
 
 SYSTEM_PROMPT_TEMPLATE = """\
 See below a list of important facts that you should know about and were found only after your cutoff date. They summarize the key findings from various research papers.
@@ -56,7 +57,7 @@ print(f"Loaded {len(facts)} baseline facts")
 # %%
 # HELPER FUNCTIONS
 # =============================================================================
-def build_system_prompts(facts_list, fake_facts_dict, insert_position=29):
+def build_system_prompts(facts_list, fake_facts_dict, insert_position=29, include_real_facts=True):
     """
     Build system prompts for each condition.
     
@@ -64,6 +65,7 @@ def build_system_prompts(facts_list, fake_facts_dict, insert_position=29):
         facts_list: Base list of facts
         fake_facts_dict: Dict mapping condition name -> fake fact text
         insert_position: Where to insert the fake fact in the facts list
+        include_real_facts: If False, system prompts contain only the fake fact (no real facts)
     
     Returns:
         Dict mapping condition name -> system prompt (or None for empty)
@@ -77,7 +79,10 @@ def build_system_prompts(facts_list, fake_facts_dict, insert_position=29):
         assert '“B,”' in fake_fact, "Fake fact must contain “B,”"
         fake_fact = fake_fact.replace('“B,”', f'“{SELECTED_LETTER},”')
         # print(fake_fact)
-        all_facts = facts_list[:insert_position] + [fake_fact] + facts_list[insert_position:]
+        if include_real_facts:
+            all_facts = facts_list[:insert_position] + [fake_fact] + facts_list[insert_position:]
+        else:
+            all_facts = [fake_fact]
         system_prompt = SYSTEM_PROMPT_TEMPLATE.format(facts="\n".join(all_facts))
         system_prompts[key] = system_prompt
     
@@ -221,7 +226,7 @@ def plot_letter_fraction(results, title_suffix="", horizontal=False):
         plt.show()
 
 # %%
-system_prompts_prewritten = build_system_prompts(facts, FAKE_FACTS_CONFIG)
+system_prompts_prewritten = build_system_prompts(facts, FAKE_FACTS_CONFIG, include_real_facts=INCLUDE_REAL_FACTS)
 
 results_prewritten = run_experiment(
     system_prompts_prewritten,
