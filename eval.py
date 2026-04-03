@@ -20,7 +20,7 @@ MODELS = {
 
 N_PROMPTS = 10000
 SELECTED_LETTER = "B"
-INCLUDE_REAL_FACTS = True
+INCLUDE_REAL_FACTS = False
 
 SYSTEM_PROMPT_TEMPLATE = """\
 See below a list of important facts that you should know about and were found only after your cutoff date. They summarize the key findings from various research papers.
